@@ -8,15 +8,17 @@ import {
   spaceComplexity,
   memoization,
   greedyVsDp,
+  stack,
+  queue,
 } from '@lib/algorithms/concepts'
 
 import {
-  stack,
-  queue,
   linkedList,
   hashTable,
   binarySearchTree,
   heap,
+  trie,
+  lruCache,
 } from '@lib/algorithms/data-structures'
 
 import {
@@ -47,10 +49,22 @@ import { nQueens, sudokuSolver, mazePathfinding } from '@lib/algorithms/backtrac
 
 import { towerOfHanoi } from '@lib/algorithms/divide-and-conquer'
 
-import { sieveOfEratosthenes } from '@lib/algorithms/math'
+import { euclideanAlgorithm, sieveOfEratosthenes } from '@lib/algorithms/math'
 
-import { huffmanCoding } from '@lib/algorithms/compression'
+import {
+  runLengthEncoding,
+  lz77,
+  lzw,
+  huffmanCoding,
+  deflate,
+  brotli,
+} from '@lib/algorithms/compression'
 
+/**
+ * Full algorithm list for SSR / static generation (getStaticPaths, SEO).
+ * Client islands should import `catalog` + `loadAlgorithm` instead so the
+ * browser only downloads the algorithm currently in use.
+ */
 export const algorithms: Algorithm[] = [
   // Concepts
   bigONotation,
@@ -67,6 +81,8 @@ export const algorithms: Algorithm[] = [
   hashTable,
   binarySearchTree,
   heap,
+  trie,
+  lruCache,
   // Sorting
   bubbleSort,
   selectionSort,
@@ -100,9 +116,15 @@ export const algorithms: Algorithm[] = [
   // Divide and Conquer
   towerOfHanoi,
   // Math
+  euclideanAlgorithm,
   sieveOfEratosthenes,
   // Compression
+  runLengthEncoding,
+  lz77,
+  lzw,
   huffmanCoding,
+  deflate,
+  brotli,
 ]
 
 export const categories: Category[] = [
@@ -126,3 +148,6 @@ export const categories: Category[] = [
   { name: 'Math', algorithms: algorithms.filter((a) => a.category === 'Math') },
   { name: 'Compression', algorithms: algorithms.filter((a) => a.category === 'Compression') },
 ]
+
+export { algorithmCatalog, catalogCategories, getCatalogEntry, isKnownAlgorithmId } from './catalog'
+export { loadAlgorithm, loadLanguageImplementation, isLoadableAlgorithm } from './loaders'

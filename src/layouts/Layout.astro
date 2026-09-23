@@ -9,6 +9,8 @@ interface Props {
   description?: string
   ogImage?: string
   canonicalURL?: string
+  robots?: string
+  structuredData?: Record<string, unknown>
 }
 
 const locale = (Astro.props.locale ?? "en") as Locale
@@ -18,24 +20,51 @@ const ogLocale = locale === "es" ? "es_ES" : "en_US"
 const {
   title = t.siteTitle,
   description = t.siteDescription,
-  ogImage = "/og-image.png",
-  canonicalURL = new URL(Astro.url.pathname, Astro.site).href,
+  ogImage = "/og/default.jpg",
+  canonicalURL = new URL(normalizePath(Astro.url.pathname), Astro.site).href,
+  robots = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+  structuredData,
 } = Astro.props
 
-const siteName = "alg0.dev"
+const siteName = "Algorithm Visualizer"
 const twitterAuthor = "@midudev"
 
-// Compute dynamic hreflang alternates
-const pathname = Astro.url.pathname.replace(/\/$/, '') || '/'
-const basePath = locale === 'es' && pathname.startsWith('/es')
-  ? pathname.slice(3) || '/'
+function normalizePath(path: string) {
+  if (path === "/") return path
+  return `${path.replace(/\/+$/, "")}/`
+}
+
+const pathname = normalizePath(Astro.url.pathname)
+const basePath = locale === "es" && pathname.startsWith("/es/")
+  ? pathname.slice(3) || "/"
   : pathname
 const enAlternateUrl = new URL(basePath, Astro.site).href
-const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Astro.site).href
+const esAlternateUrl = new URL(basePath === "/" ? "/es/" : `/es${basePath}`, Astro.site).href
+const alternateOgLocale = locale === "es" ? "en_US" : "es_ES"
+const defaultStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: siteName,
+  description,
+  url: canonicalURL,
+  applicationCategory: "EducationalApplication",
+  operatingSystem: "Any",
+  inLanguage: locale,
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  author: {
+    "@type": "Person",
+    name: "Miguel Ángel Durán",
+    url: "https://midu.dev",
+  },
+}
 ---
 
 <!doctype html>
-<html lang={locale}>
+<html lang={locale} data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -44,11 +73,46 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
 
+    <!-- Fonts (Latin subsets) — both paint above the fold -->
+    <link
+      rel="preload"
+      href="/fonts/GeistPixel-Square.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/GeistMono-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
     <!-- Primary Meta Tags -->
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <meta name="robots" content={robots} />
     <meta name="theme-color" content="#000000" />
+    <script is:inline>
+      const savedTheme = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('theme='))
+        ?.split('=')[1]
+      const theme =
+        savedTheme === 'light' || savedTheme === 'dark'
+          ? savedTheme
+          : window.matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark'
+      document.documentElement.dataset.theme = theme
+      document.documentElement.style.colorScheme = theme
+      document.querySelector('meta[name="theme-color"]')?.setAttribute(
+        'content',
+        theme === 'light' ? '#ffffff' : '#000000',
+      )
+    </script>
     <link rel="canonical" href={canonicalURL} />
     <link rel="manifest" href="/site.webmanifest" />
     
@@ -63,6 +127,7 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
     <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content={siteName} />
     <meta property="og:locale" content={ogLocale} />
+    <meta property="og:locale:alternate" content={alternateOgLocale} />
     <link rel="alternate" hreflang="en" href={enAlternateUrl} />
     <link rel="alternate" hreflang="es" href={esAlternateUrl} />
     <link rel="alternate" hreflang="x-default" href={enAlternateUrl} />
@@ -70,32 +135,17 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content={twitterAuthor} />
+    <meta name="twitter:creator" content={twitterAuthor} />
     <meta name="twitter:url" content={canonicalURL} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={new URL(ogImage, Astro.site).href} />
+    <meta name="twitter:image:alt" content={title} />
 
     <!-- Structured Data -->
     <script
       type="application/ld+json"
-      set:html={JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        name: siteName,
-        description: description,
-        url: canonicalURL,
-        applicationCategory: "EducationalApplication",
-        operatingSystem: "Any",
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "USD",
-        },
-        author: {
-          "@type": "Organization",
-          name: siteName,
-        },
-      })}
+      set:html={JSON.stringify(structuredData ?? defaultStructuredData)}
     />
   </head>
   <body class="bg-black text-gray-100 font-sans antialiased">
@@ -104,6 +154,9 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
       {locale === "es" ? "Ir al contenido principal" : "Skip to main content"}
     </a>
     <slot />
+    <script>
+      import '@scripts/client.ts'
+    </script>
   </body>
 </html>
 
@@ -114,6 +167,10 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
     width: 100%;
     height: 100%;
     overflow: hidden;
+  }
+
+  html {
+    background: var(--surface);
   }
 
   /* Skip link — visible only on focus */
@@ -151,11 +208,11 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--subtle-strong);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: var(--subtle-hover);
   }
 
   /* Custom range slider for speed */
@@ -167,14 +224,14 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
   }
   input[type="range"]::-webkit-slider-runnable-track {
     height: 4px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--subtle-strong);
     border-radius: 2px;
   }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 12px;
     height: 12px;
-    background: #fff;
+    background: var(--foreground);
     border-radius: 50%;
     margin-top: -4px;
     transition: transform 0.15s ease;
@@ -184,13 +241,13 @@ const esAlternateUrl = new URL(basePath === '/' ? '/es/' : `/es${basePath}`, Ast
   }
   input[type="range"]::-moz-range-track {
     height: 4px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--subtle-strong);
     border-radius: 2px;
   }
   input[type="range"]::-moz-range-thumb {
     width: 12px;
     height: 12px;
-    background: #fff;
+    background: var(--foreground);
     border-radius: 50%;
     border: none;
   }
